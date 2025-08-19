@@ -241,7 +241,7 @@ public final class TextFieldMapper extends TextFamilyFieldMapper {
         private final IndexVersion indexCreatedVersion;
 
         private final Parameter<Boolean> index = Parameter.indexParam(m -> ((TextFieldMapper) m).index, true);
-        private final Parameter<Boolean> store = Parameter.storeParam(m -> ((TextFieldMapper) m).store, false);
+        private Parameter<Boolean> store = Parameter.storeParam(m -> ((TextFieldMapper) m).store, false);
 
         final Parameter<SimilarityProvider> similarity = TextParams.similarity(m -> ((TextFieldMapper) m).similarity);
 
@@ -454,6 +454,19 @@ public final class TextFieldMapper extends TextFamilyFieldMapper {
         @Override
         public TextFieldMapper build(MapperBuilderContext context) {
             this.isSyntheticSourceEnabled = context.isSourceSynthetic();
+
+            // backwards compatibility checks
+            if (keywordMultiFieldsNotStoredWhenIgnored_indexVersionCheck(indexCreatedVersion) == false) {
+                this.store = Parameter.storeParam(m -> ((TextFieldMapper) m).store, () -> {
+                    if (multiFieldsNotStoredByDefault_indexVersionCheck(indexCreatedVersion)) {
+                        return isSyntheticSourceEnabled
+                            && isWithinMultiField == false
+                            && multiFieldsBuilder.hasSyntheticSourceCompatibleKeywordField() == false;
+                    } else {
+                        return isSyntheticSourceEnabled && multiFieldsBuilder.hasSyntheticSourceCompatibleKeywordField() == false;
+                    }
+                });
+            }
 
             FieldType fieldType = TextParams.buildFieldType(
                 index,
