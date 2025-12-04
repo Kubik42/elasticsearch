@@ -321,6 +321,10 @@ public final class TextFieldMapper extends FieldMapper {
             // If 'store' parameter was explicitly provided we'll reject the request.
             // Note that if current builder is a multi field, then we don't need to store, given that responsibility lies with parent field
             this.store = Parameter.storeParam(m -> ((TextFieldMapper) m).store, () -> {
+                if (indexCreatedVersion.onOrAfter(IndexVersions.SECURITY_MIGRATIONS_METADATA_FLATTENED_UPDATE)) {
+                    return false;
+                }
+
                 if (multiFieldsNotStoredByDefaultIndexVersionCheck(indexCreatedVersion)) {
                     return isSyntheticSourceEnabled
                         && this.withinMultiField == false
