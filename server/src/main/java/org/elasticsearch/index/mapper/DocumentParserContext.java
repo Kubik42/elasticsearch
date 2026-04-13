@@ -175,7 +175,6 @@ public abstract class DocumentParserContext {
     private final SourceToParse sourceToParse;
 
     private final Set<String> ignoredFields;
-    private final Set<String> singleValueFields;
     private final List<IgnoredSourceFieldMapper.NameValue> ignoredFieldValues;
     private Scope currentScope;
 
@@ -213,7 +212,6 @@ public abstract class DocumentParserContext {
         MappingParserContext mappingParserContext,
         SourceToParse sourceToParse,
         Set<String> ignoreFields,
-        Set<String> singleValueFields,
         List<IgnoredSourceFieldMapper.NameValue> ignoredFieldValues,
         Scope currentScope,
         Map<String, List<Mapper.Builder>> dynamicMappers,
@@ -236,7 +234,6 @@ public abstract class DocumentParserContext {
         this.mappingParserContext = mappingParserContext;
         this.sourceToParse = sourceToParse;
         this.ignoredFields = ignoreFields;
-        this.singleValueFields = singleValueFields;
         this.ignoredFieldValues = ignoredFieldValues;
         this.currentScope = currentScope;
         this.dynamicMappers = dynamicMappers;
@@ -264,7 +261,6 @@ public abstract class DocumentParserContext {
             in.mappingParserContext,
             in.sourceToParse,
             in.ignoredFields,
-            in.singleValueFields,
             in.ignoredFieldValues,
             in.currentScope,
             in.dynamicMappers,
@@ -296,7 +292,6 @@ public abstract class DocumentParserContext {
             mappingLookup,
             mappingParserContext,
             source,
-            new HashSet<>(),
             new HashSet<>(),
             new ArrayList<>(),
             Scope.SINGLETON,
@@ -451,18 +446,6 @@ public abstract class DocumentParserContext {
     public final void addToFieldNames(String field) {
         if (fieldNamesFieldMapper != null) {
             fieldNamesFieldMapper.addFieldNames(this, field);
-        }
-    }
-
-    /**
-     * Enforces that a field configured with {@code multi_value=no} stores at most one value per document.
-     * Throws {@link IllegalStateException} on the second call for the same field name.
-     */
-    public final void enforceSingleValue(String fieldName) {
-        if (singleValueFields.add(fieldName) == false) {
-            throw new IllegalStateException(
-                "Field [" + fieldName + "] is configured with multi_value=no but more than one value was detected"
-            );
         }
     }
 
