@@ -39,10 +39,6 @@ public class DocValuesFieldFactory {
         this.indexVersion = indexVersion;
     }
 
-    public boolean isSingleValued() {
-        return multiValue == MultiValue.NO;
-    }
-
     /**
      * Adds a numeric doc values field. For {@code multi_value=no}, creates a {@link NumericDocValuesField} (single-valued).
      * Otherwise, creates a {@link SortedNumericDocValuesField} (multi-valued).

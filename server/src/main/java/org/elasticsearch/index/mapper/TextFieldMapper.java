@@ -920,11 +920,6 @@ public final class TextFieldMapper extends FieldMapper {
         }
 
         @Override
-        public DocValuesParameter.Values docValuesParameters() {
-            return docValuesParams;
-        }
-
-        @Override
         public boolean eagerGlobalOrdinals() {
             return eagerGlobalOrdinals;
         }
@@ -1714,6 +1709,11 @@ public final class TextFieldMapper extends FieldMapper {
             fieldType().isWithinMultiField(),
             usesBinaryDocValuesForFallbackFields
         ).init(this);
+    }
+
+    @Override
+    protected boolean isSingleValueEnforced() {
+        return docValuesParameters.multiValue() == DocValuesParameter.Values.MultiValue.NO;
     }
 
     @Override

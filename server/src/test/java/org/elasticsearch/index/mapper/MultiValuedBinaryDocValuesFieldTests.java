@@ -389,6 +389,10 @@ public class MultiValuedBinaryDocValuesFieldTests extends ESTestCase {
         assertEquals(value, storedField.binaryValue());
     }
 
+    /**
+     * This test verifies that we're not double storing field names in keyedFields ({@link LuceneDocument}) and singleValuedFields
+     * ({@link DocumentParserContext}).
+     */
     public void testMultiValueNoDoesNotStoreInKeyedFields() {
         // given
         LuceneDocument doc = new LuceneDocument();

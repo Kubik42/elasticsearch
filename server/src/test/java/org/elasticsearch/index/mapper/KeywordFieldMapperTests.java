@@ -1038,6 +1038,234 @@ public class KeywordFieldMapperTests extends MapperTestCase {
         );
     }
 
+    public void testSingleValuesAreAcceptedWhenMultiValueNo() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        ParsedDocument doc = mapper.parse(source(b -> b.field("field", "hello")));
+        assertEquals(1, doc.rootDoc().getFields("field").stream().filter(f -> f.fieldType().docValuesType() != DocValuesType.NONE).count());
+    }
+
+    public void testSecondValueIsRejectedWhenMultiValueNo() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", "a", "b")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+        assertThat(e.getCause().getMessage(), containsString("encountered multiple values"));
+    }
+
+    /**
+     * Scenario: first value indexes normally to {@code field}. Second value exceeds {@code ignore_above} and would be written to the
+     * {@code field._original} fallback. Enforcement fires in {@link FieldMapper#parse(DocumentParserContext)} before the
+     * {@code ignore_above} branch, so the multi-valued input is rejected regardless of which suffix the second write would have targeted.
+     */
+    public void testMultiValueNoRejectsNormalPlusIgnoreAboveFallback() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createSytheticSourceMapperService(
+            fieldMapping(
+                b -> b.field("type", "keyword").field("ignore_above", 5).startObject("doc_values").field("multi_value", "no").endObject()
+            )
+        ).documentMapper();
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", "ok", "toolongvalue")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+    }
+
+    /**
+     * Both values exceed {@code ignore_above}, so both would route to {@code field._original}. Enforcement still throws on the second
+     * {@link FieldMapper#parse(DocumentParserContext)} call before anything is written.
+     */
+    public void testMultiValueNoRejectsTwoIgnoreAboveFallbacks() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createSytheticSourceMapperService(
+            fieldMapping(
+                b -> b.field("type", "keyword").field("ignore_above", 5).startObject("doc_values").field("multi_value", "no").endObject()
+            )
+        ).documentMapper();
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", "toolong1", "toolong2")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+    }
+
+    /**
+     * Single oversized value is the only root value, so only one {@link FieldMapper#parse(DocumentParserContext)} call happens. The
+     * fallback write to {@code field._original} is not a second enforcement trigger — enforcement lives on the root
+     * {@link FieldMapper#parse(DocumentParserContext)} path, not on internal Lucene field writes.
+     */
+    public void testMultiValueNoAcceptsSingleIgnoreAboveValue() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createSytheticSourceMapperService(
+            fieldMapping(
+                b -> b.field("type", "keyword").field("ignore_above", 5).startObject("doc_values").field("multi_value", "no").endObject()
+            )
+        ).documentMapper();
+        ParsedDocument doc = mapper.parse(source(b -> b.field("field", "toolongvalue")));
+        assertThat(doc.rootDoc().getFields("_ignored").stream().anyMatch(f -> "field".equals(f.stringValue())), equalTo(true));
+    }
+
+    /**
+     * The {@code copy_to} target is configured with {@code multi_value=no}. The source field writes one value, then the destination
+     * field receives a direct value — giving the destination two {@link FieldMapper#parse(DocumentParserContext)} invocations and
+     * tripping enforcement on the target's {@code fullPath}.
+     */
+    public void testMultiValueNoRejectsCopyToTargetWithDirectValue() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(mapping(b -> {
+            b.startObject("source").field("type", "keyword").field("copy_to", "target").endObject();
+            b.startObject("target").field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject().endObject();
+        }));
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.field("source", "a").field("target", "b")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+        assertThat(e.getCause().getMessage(), containsString("target"));
+    }
+
+    /**
+     * Source has no {@code multi_value=no} restriction and carries an array of two values. Every source element is copied to the
+     * target, so the target receives two values and its own {@code multi_value=no} enforcement fires.
+     */
+    public void testMultiValueNoRejectsCopyToTargetFromSourceArray() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(mapping(b -> {
+            b.startObject("source").field("type", "keyword").field("copy_to", "target").endObject();
+            b.startObject("target").field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject().endObject();
+        }));
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("source", "a", "b")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+        assertThat(e.getCause().getMessage(), containsString("target"));
+    }
+
+    /**
+     * Source field is itself {@code multi_value=no}. A multi-valued array on the source is rejected before {@code copy_to} runs, so
+     * the target never sees the values.
+     */
+    public void testMultiValueNoRejectsCopyToSourceWithMultipleValues() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(mapping(b -> {
+            b.startObject("source")
+                .field("type", "keyword")
+                .field("copy_to", "target")
+                .startObject("doc_values")
+                .field("multi_value", "no")
+                .endObject()
+                .endObject();
+            b.startObject("target").field("type", "keyword").endObject();
+        }));
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("source", "a", "b")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+        assertThat(e.getCause().getMessage(), containsString("source"));
+    }
+
+    /**
+     * Enforcement lives in {@link FieldMapper#parse(DocumentParserContext)}, which runs for every element of an array — including JSON
+     * nulls. This differs from the prior inline placement which only fired after a non-null value check. The stricter semantics are
+     * intentional: if the user sent multiple JSON tokens for a {@code multi_value=no} field, reject regardless of whether any are null.
+     */
+    public void testMultiValueNoRejectsNullThenValue() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        DocumentParsingException e = expectThrows(DocumentParsingException.class, () -> mapper.parse(source(b -> {
+            b.startArray("field").nullValue().value("x").endArray();
+        })));
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+    }
+
+    public void testMultiValueNoRejectsValueThenNull() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        DocumentParsingException e = expectThrows(DocumentParsingException.class, () -> mapper.parse(source(b -> {
+            b.startArray("field").value("x").nullValue().endArray();
+        })));
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+    }
+
+    /**
+     * A single null still triggers one enforcement call but no second call fires, so the document is accepted.
+     */
+    public void testMultiValueNoAcceptsSingleNull() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        mapper.parse(source(b -> b.nullField("field")));
+    }
+
+    /**
+     * Sub-field has its own {@code fullPath} ({@code parent.child}) and therefore its own enforcement slot. Each parent array element
+     * triggers a sub-field parse, so enforcement on the sub-field's slot fires twice and throws.
+     */
+    public void testMultiValueNoOnMultiFieldSubRejectsParentArray() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(mapping(b -> {
+            b.startObject("parent").field("type", "keyword");
+            b.startObject("fields");
+            b.startObject("child").field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject().endObject();
+            b.endObject();
+            b.endObject();
+        }));
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("parent", "a", "b")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+        assertThat(e.getCause().getMessage(), containsString("parent.child"));
+    }
+
+    public void testMultiValueNoOnMultiFieldSubAcceptsSingleValue() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(mapping(b -> {
+            b.startObject("parent").field("type", "keyword");
+            b.startObject("fields");
+            b.startObject("child").field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject().endObject();
+            b.endObject();
+            b.endObject();
+        }));
+        mapper.parse(source(b -> b.field("parent", "a")));
+    }
+
+    /**
+     * Parent has {@code multi_value=no}; sub-field is default. Enforcement on the parent's slot fires before multi-fields are
+     * processed, so the second array element throws on the parent's path.
+     */
+    public void testMultiValueNoOnParentWithMultiFieldRejectsParentArray() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(mapping(b -> {
+            b.startObject("parent").field("type", "keyword").startObject("doc_values").field("multi_value", "no").endObject();
+            b.startObject("fields");
+            b.startObject("child").field("type", "keyword").endObject();
+            b.endObject();
+            b.endObject();
+        }));
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("parent", "a", "b")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+        assertThat(e.getCause().getMessage(), containsString("Field [parent]"));
+    }
+
     public void testFieldTypeWithSkipDocValues_LogsDbModeDisabledSetting() throws IOException {
         final MapperService mapperService = createMapperService(
             Settings.builder()

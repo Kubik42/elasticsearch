@@ -700,6 +700,11 @@ public class IpFieldMapper extends FieldMapper {
     }
 
     @Override
+    protected boolean isSingleValueEnforced() {
+        return docValuesParameters.multiValue() == DocValuesParameter.Values.MultiValue.NO;
+    }
+
+    @Override
     public IpFieldType fieldType() {
         return (IpFieldType) super.fieldType();
     }
@@ -753,7 +758,12 @@ public class IpFieldMapper extends FieldMapper {
         if (fieldType().indexType.hasDocValues()) {
             if (fieldType().usesBinaryDocValues()) {
                 assert fieldType().indexType.hasDocValuesSkipper() == false : "skippers are not supported for binary doc values";
-                dvFactory.addBinaryField(doc, fieldType().name(), address.binaryValue(), MultiValuedBinaryDocValuesField.ValueOrdering.SORTED_UNIQUE);
+                dvFactory.addBinaryField(
+                    doc,
+                    fieldType().name(),
+                    address.binaryValue(),
+                    MultiValuedBinaryDocValuesField.ValueOrdering.SORTED_UNIQUE
+                );
             } else {
                 dvFactory.addSortedField(doc, fieldType().name(), address.binaryValue());
             }
@@ -824,7 +834,7 @@ public class IpFieldMapper extends FieldMapper {
                             new BinaryWithOffsetsDocValuesSyntheticFieldLoaderLayer(fullPath(), offsetsFieldName, IpFieldMapper::convert)
                         );
                     } else {
-                        layers.add(new BinaryDocValuesSyntheticFieldLoaderLayer(fullPath()) {
+                        layers.add(new BinaryDocValuesSyntheticFieldLoaderLayer(fullPath(), indexSettings.getIndexVersionCreated()) {
                             @Override
                             protected void writeValue(XContentBuilder b, BytesRef value) throws IOException {
                                 BytesRef converted = IpFieldMapper.convert(value);

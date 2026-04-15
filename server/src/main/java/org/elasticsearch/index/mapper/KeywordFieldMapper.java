@@ -688,11 +688,6 @@ public final class KeywordFieldMapper extends FieldMapper {
             return usesBinaryDocValuesForIgnoredFields;
         }
 
-        @Override
-        public DocValuesParameter.Values docValuesParameters() {
-            return docValuesParams;
-        }
-
         private boolean usesSingleValuedDocValues() {
             return docValuesParams != null && docValuesParams.multiValue() == DocValuesParameter.Values.MultiValue.NO;
         }
@@ -1373,6 +1368,11 @@ public final class KeywordFieldMapper extends FieldMapper {
 
     public DocValuesParameter.Values docValuesParameters() {
         return docValuesParameters;
+    }
+
+    @Override
+    protected boolean isSingleValueEnforced() {
+        return docValuesParameters.multiValue() == DocValuesParameter.Values.MultiValue.NO;
     }
 
     protected void parseCreateField(DocumentParserContext context) throws IOException {

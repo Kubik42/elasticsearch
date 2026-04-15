@@ -55,8 +55,10 @@ public abstract class MultiValuedSortedBinaryDocValues extends SortedBinaryDocVa
 
     /**
      * Legacy reader for callers that read inherently multi-valued internal fields (ex. {@code _ignored_source}) that may contain data in
-     * the deprecated {@link IntegratedCounts} format. Falls back to {@link IntegratedCounts} when no {@code .counts} companion field is
-     * present. New callers should use {@link #from(LeafReader, String)}.
+     * the deprecated {@link IntegratedCounts} format.
+     * <p>
+     * Falls back to {@link IntegratedCounts} when no {@code .counts} companion field is present. New callers should use
+     * {@link #from(LeafReader, String)}.
      */
     public static MultiValuedSortedBinaryDocValues fromLegacy(LeafReader leafReader, String valuesFieldName) throws IOException {
         BinaryDocValues values = DocValues.getBinary(leafReader, valuesFieldName);

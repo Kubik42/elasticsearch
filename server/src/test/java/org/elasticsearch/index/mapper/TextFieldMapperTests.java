@@ -2723,4 +2723,63 @@ public class TextFieldMapperTests extends MapperTestCase {
         assertThat(syntheticSource, containsString(shortValue));
         assertThat(syntheticSource, containsString(longValue));
     }
+
+    public void testSingleValuesAreAcceptedWhenMultiValueNo() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "text").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        mapper.parse(source(b -> b.field("field", "hello")));
+    }
+
+    public void testSecondValueIsRejectedWhenMultiValueNo() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "text").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", "a", "b")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+        assertThat(e.getCause().getMessage(), containsString("encountered multiple values"));
+    }
+
+    /**
+     * We have two values for a field: normal value, and a value that exceeds MAX_TERM_LENGTH.
+     *
+     * First value routes to SortedSet doc values; second exceeds MAX_TERM_LENGTH and would route to the {@code ._original} fallback field.
+     * While these are technically two separate fields, single value enforcement is done on the original field, so the second value is
+     * rejected.
+     */
+    public void testSecondValueInFallbackFieldIsRejectedWhenMultiValueNoAndFirstValueInRegularField() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "text").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        String shortValue = "ok";
+        String longValue = "x".repeat(IndexWriter.MAX_TERM_LENGTH + 1);
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", shortValue, longValue)))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+    }
+
+    /**
+     * We have two values for a field, both of which exceed MAX_TERM_LENGTH and would route to the {@code ._original} fallback field.
+     */
+    public void testSecondValueInFallbackFieldIsRejectedWhenMultiValueNo() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "text").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        String longValue1 = "a".repeat(IndexWriter.MAX_TERM_LENGTH + 1);
+        String longValue2 = "b".repeat(IndexWriter.MAX_TERM_LENGTH + 1);
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", longValue1, longValue2)))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+    }
 }

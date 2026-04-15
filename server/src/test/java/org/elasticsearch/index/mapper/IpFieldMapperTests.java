@@ -493,6 +493,54 @@ public class IpFieldMapperTests extends MapperTestCase {
         );
     }
 
+    public void testMultiValueNoAcceptsSingleValue() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "ip").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        mapper.parse(source(b -> b.field("field", "::1")));
+    }
+
+    public void testMultiValueNoRejectsArray() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(
+            fieldMapping(b -> b.field("type", "ip").startObject("doc_values").field("multi_value", "no").endObject())
+        );
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", "::1", "::2")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+        assertThat(e.getCause().getMessage(), containsString("encountered multiple values"));
+    }
+
+    public void testMultiValueNoHighCardinalityRejectsArray() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(fieldMapping(b -> {
+            b.field("type", "ip");
+            b.startObject("doc_values").field("cardinality", "high").field("multi_value", "no").endObject();
+        }));
+        mapper.parse(source(b -> b.field("field", "::1")));
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", "::1", "::2")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+    }
+
+    public void testMultiValueNoRejectsNormalPlusIgnoreMalformedFallback() throws IOException {
+        assumeTrue("feature under test must be enabled", FieldMapper.DocValuesParameter.EXTENDED_DOC_VALUES_PARAMS_FF.isEnabled());
+        DocumentMapper mapper = createDocumentMapper(fieldMapping(b -> {
+            b.field("type", "ip").field("ignore_malformed", true);
+            b.startObject("doc_values").field("multi_value", "no").endObject();
+        }));
+        DocumentParsingException e = expectThrows(
+            DocumentParsingException.class,
+            () -> mapper.parse(source(b -> b.array("field", "::1", "not-an-ip")))
+        );
+        assertThat(e.getCause().getMessage(), containsString("[multi_value=no]"));
+    }
+
     @Override
     protected String randomSyntheticSourceKeep() {
         return "all";

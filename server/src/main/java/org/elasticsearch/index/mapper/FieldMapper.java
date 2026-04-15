@@ -196,6 +196,9 @@ public abstract class FieldMapper extends Mapper {
             if (builderParams.hasScript) {
                 throwIndexingWithScriptParam();
             }
+            if (isSingleValueEnforced()) {
+                context.enforceSingleValue(fullPath());
+            }
 
             parseCreateField(context);
         } catch (Exception e) {
@@ -265,6 +268,16 @@ public abstract class FieldMapper extends Mapper {
      * current failing token
      */
     protected abstract void parseCreateField(DocumentParserContext context) throws IOException;
+
+    /**
+     * Whether this mapper enforces single-valued semantics (i.e. {@code multi_value=no}). When {@code true},
+     * {@link DocumentParserContext#enforceSingleValue(String)} is invoked before {@link #parseCreateField(DocumentParserContext)}
+     * so a second value for the same document throws. Override on mappers that expose a {@code multi_value} doc values
+     * parameter set to {@code no}.
+     */
+    protected boolean isSingleValueEnforced() {
+        return false;
+    }
 
     /**
      * @return whether this field mapper uses a script to generate its values
