@@ -41,7 +41,12 @@ if (buildParams.inFipsJvm){
 if (buildParams.snapshotBuild == false) {
   tasks.named("yamlRestTest").configure {
     filter {
-      excludeTestsMatching "*110_downsample_temporality*"
+      excludeTestsMatching "org.elasticsearch.xpack.downsample.DownsampleWithBasicRestIT.test {p0=downsample/110_downsample_temporality/Downsample delta temporality counter}"
+      excludeTestsMatching "org.elasticsearch.xpack.downsample.DownsampleWithBasicRestIT.test {p0=downsample/110_downsample_temporality/Downsample mixed temporality counters}"
+      excludeTestsMatching "org.elasticsearch.xpack.downsample.DownsampleWithBasicRestIT.test"
+      excludeTestsMatching "org.elasticsearch.xpack.downsample.DownsampleRestIT.test {p0=downsample/110_downsample_temporality/Downsample delta temporality counter}"
+      excludeTestsMatching "org.elasticsearch.xpack.downsample.DownsampleRestIT.test {p0=downsample/110_downsample_temporality/Downsample mixed temporality counters}"
+      excludeTestsMatching "org.elasticsearch.xpack.downsample.DownsampleRestIT.test"
     }
   }
 }
