@@ -1,0 +1,36 @@
+[orchestrator 22:12:12] lock acquired (pid 5761); full log: /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/scheduler/logs/run-20260612T221212Z.log
+[orchestrator 22:12:12] === step: discover (discover.sh) ===
+[auto-fix 22:12:12] querying candidate pool in elastic/elasticsearch
+[auto-fix 22:12:13] primary #150108: [CI] EsqlSpecForceStoredLoadingIT test {csv-spec:k8s-timeseries-promql.scalar_float_div_fraction} failing
+[auto-fix 22:12:13] primary locus: :x-pack:plugin:esql:qa:server:single-node:javaRestTest::test {csv-spec:k8s-timeseries-promql.scalar_float_div_compound}
+[auto-fix 22:12:14] siblings: <none>
+[auto-fix 22:12:14] DRY_RUN: would run: gh issue edit 150108 --repo elastic/elasticsearch --add-assignee Kubik42
+[auto-fix 22:12:14] claimed primary #150108 for Kubik42
+[auto-fix 22:12:14] output issue=150108
+[auto-fix 22:12:14] output issue_json=/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/issue.json
+[auto-fix 22:12:14] output siblings=
+[orchestrator 22:12:14] step discover exited 0
+[orchestrator 22:12:14] claimed issue #150108
+[orchestrator 22:12:14] === step: reproduce (reproduce.sh) ===
+From github.com:elastic/elasticsearch
+ * branch                      main       -> FETCH_HEAD
+Reset branch 'auto-fix/working-base'
+branch 'auto-fix/working-base' set up to track 'elasticsearch_main/main'.
+Your branch is up to date with 'elasticsearch_main/main'.
+[auto-fix 22:12:16] reset run worktree /Users/dmitrykubikov/workspace/elasticsearch-autofix-worktree to elasticsearch_main/main
+[auto-fix 22:12:16] base SHA 83e6f8fe5e4f8f24b856c785f82237484fb0fe79
+[auto-fix 22:12:16] branch gate ok (main is applicable)
+[auto-fix 22:12:16] java gate ok (JAVA26_HOME present)
+[auto-fix 22:12:16] no muted-tests.yml entry for the org.elasticsearch.xpack.esql.qa.single_node.EsqlSpecForceStoredLoadingIT.test family; nothing to unmute
+[auto-fix 22:12:16] attempt [narrow/original]: ./gradlew :x-pack:plugin:esql:qa:server:single-node:javaRestTest --rerun-tasks --no-build-cache --no-configuration-cache --tests org.elasticsearch.xpack.esql.qa.single_node.EsqlSpecForceStoredLoadingIT.test {csv-spec:k8s-timeseries-promql.scalar_float_div_compound} -Druntime.java=26 -Dtests.method=test {csv-spec:k8s-timeseries-promql.scalar_float_div_compound} -Dtests.seed=2A0DD97BE3A71632 -Dtests.locale=ar-QA -Dtests.timezone=Africa/Malabo
+[auto-fix 22:14:28] attempt [narrow/original] gradle exit 1
+[auto-fix 22:14:28] attempt [class-level (excludeTestsMatching leak probe)]: ./gradlew :x-pack:plugin:esql:qa:server:single-node:javaRestTest --rerun-tasks --no-build-cache --no-configuration-cache --tests org.elasticsearch.xpack.esql.qa.single_node.EsqlSpecForceStoredLoadingIT -Druntime.java=26 -Dtests.method=test {csv-spec:k8s-timeseries-promql.scalar_float_div_compound} -Dtests.seed=2A0DD97BE3A71632 -Dtests.locale=ar-QA -Dtests.timezone=Africa/Malabo
+[auto-fix 22:17:08] attempt [class-level (excludeTestsMatching leak probe)] gradle exit 0
+[auto-fix 22:17:08] final classification: NOT_FOUND
+[auto-fix 22:17:08] output outcome=FAILURE
+[auto-fix 22:17:08] DRY_RUN: would run: gh issue comment 150108 --repo elastic/elasticsearch --body-file /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/comment.md
+[auto-fix 22:17:08] step 2 outcome: FAILURE
+[orchestrator 22:17:08] step reproduce exited 0
+[orchestrator 22:17:08] reproduce outcome: FAILURE
+[orchestrator 22:17:08] not reproduced; staying assigned for manual review; done
+[orchestrator 22:17:08] lock released

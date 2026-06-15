@@ -1,0 +1,42 @@
+[orchestrator 22:55:35] lock acquired (pid 19706); full log: /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/scheduler/logs/run-20260612T225535Z.log
+[orchestrator 22:55:35] === step: discover (discover.sh) ===
+[auto-fix 22:55:35] querying candidate pool in elastic/elasticsearch
+[auto-fix 22:55:36] primary #149770: [CI] DLMFrozenTransitionWithSecurityIT testCanTransitionIndex failing
+[auto-fix 22:55:36] primary locus: :x-pack:plugin:dlm-frozen-transition:javaRestTest::testCanTransitionIndex
+[auto-fix 22:55:36] siblings: <none>
+[auto-fix 22:55:36] DRY_RUN: would run: gh issue edit 149770 --repo elastic/elasticsearch --add-assignee Kubik42
+[auto-fix 22:55:36] claimed primary #149770 for Kubik42
+[auto-fix 22:55:36] output issue=149770
+[auto-fix 22:55:36] output issue_json=/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/issue.json
+[auto-fix 22:55:36] output siblings=
+[orchestrator 22:55:36] step discover exited 0
+[orchestrator 22:55:36] claimed issue #149770
+[orchestrator 22:55:36] === step: reproduce (reproduce.sh) ===
+From github.com:elastic/elasticsearch
+ * branch                      main       -> FETCH_HEAD
+Reset branch 'auto-fix/working-base'
+branch 'auto-fix/working-base' set up to track 'elasticsearch_main/main'.
+Your branch is up to date with 'elasticsearch_main/main'.
+[auto-fix 22:55:38] reset run worktree /Users/dmitrykubikov/workspace/elasticsearch-autofix-worktree to elasticsearch_main/main
+[auto-fix 22:55:38] base SHA 83e6f8fe5e4f8f24b856c785f82237484fb0fe79
+[auto-fix 22:55:38] branch gate ok (main is applicable)
+[auto-fix 22:55:38] java gate ok (JAVA26_HOME present)
+[auto-fix 22:55:38] unmuted 1 muted-tests.yml entr(y/ies) [#149770] for the org.elasticsearch.xpack.dlm.frozen.DLMFrozenTransitionWithSecurityIT.test family before reproducing
+[auto-fix 22:55:38] attempt [narrow/original]: ./gradlew :x-pack:plugin:dlm-frozen-transition:javaRestTest --rerun-tasks --no-build-cache --no-configuration-cache --tests org.elasticsearch.xpack.dlm.frozen.DLMFrozenTransitionWithSecurityIT.testCanTransitionIndex -Druntime.java=26 -Dtests.seed=DF806E5B4051A9C8 -Dtests.locale=sat-IN -Dtests.timezone=America/Regina
+[auto-fix 22:56:59] attempt [narrow/original] gradle exit 0
+[auto-fix 22:56:59] attempt [class-level (excludeTestsMatching leak probe)]: ./gradlew :x-pack:plugin:dlm-frozen-transition:javaRestTest --rerun-tasks --no-build-cache --no-configuration-cache --tests org.elasticsearch.xpack.dlm.frozen.DLMFrozenTransitionWithSecurityIT -Druntime.java=26 -Dtests.seed=DF806E5B4051A9C8 -Dtests.locale=sat-IN -Dtests.timezone=America/Regina
+[auto-fix 22:58:08] attempt [class-level (excludeTestsMatching leak probe)] gradle exit 0
+[auto-fix 22:58:09] final classification: NOT_REPRODUCED
+[auto-fix 22:58:09] reverted muted-tests.yml unmute (step 3 will remove the mutes permanently)
+[auto-fix 22:58:09] output outcome=NOT_REPRODUCED
+[auto-fix 22:58:09] DRY_RUN: would run: gh issue comment 149770 --repo elastic/elasticsearch --body-file /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/comment.md
+[auto-fix 22:58:09] step 2 outcome: NOT_REPRODUCED
+[orchestrator 22:58:09] step reproduce exited 0
+[orchestrator 22:58:09] reproduce outcome: NOT_REPRODUCED
+
+**Auto-fix step 2 — NOT_REPRODUCED**
+
+The named test passed on base 83e6f8fe5e4f8f24b856c785f82237484fb0fe79 with the issue's seed. Not reproducible as-is (single-phase; -Dtests.iters phase is deferred). Staying assigned for manual review.
+
+[orchestrator 22:58:09] not reproduced; staying assigned for manual review; done
+[orchestrator 22:58:09] lock released

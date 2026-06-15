@@ -1,0 +1,28 @@
+[orchestrator 22:47:05] lock acquired (pid 17572); full log: /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/scheduler/logs/run-20260612T224705Z.log
+[orchestrator 22:47:05] === step: discover (discover.sh) ===
+[auto-fix 22:47:05] querying candidate pool in elastic/elasticsearch
+[auto-fix 22:47:06] primary #149770: [CI] DLMFrozenTransitionWithSecurityIT testCanTransitionIndex failing
+[auto-fix 22:47:06] primary locus: <none>
+[auto-fix 22:47:06] siblings: <none>
+https://github.com/elastic/elasticsearch/issues/149770
+[auto-fix 22:47:08] claimed primary #149770 for Kubik42
+[auto-fix 22:47:08] output issue=149770
+[auto-fix 22:47:08] output issue_json=/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/issue.json
+[auto-fix 22:47:08] output siblings=
+[orchestrator 22:47:08] step discover exited 0
+[orchestrator 22:47:08] claimed issue #149770
+[orchestrator 22:47:08] === step: reproduce (reproduce.sh) ===
+From github.com:elastic/elasticsearch
+ * branch                      main       -> FETCH_HEAD
+Reset branch 'auto-fix/working-base'
+branch 'auto-fix/working-base' set up to track 'elasticsearch_main/main'.
+Your branch is up to date with 'elasticsearch_main/main'.
+[auto-fix 22:47:10] reset run worktree /Users/dmitrykubikov/workspace/elasticsearch-autofix-worktree to elasticsearch_main/main
+[auto-fix 22:47:10] base SHA 83e6f8fe5e4f8f24b856c785f82237484fb0fe79
+[auto-fix 22:47:10] output outcome=FAILURE
+https://github.com/elastic/elasticsearch/issues/149770#issuecomment-4696074216
+[auto-fix 22:47:11] step 2 outcome: FAILURE
+[orchestrator 22:47:11] step reproduce exited 0
+[orchestrator 22:47:11] reproduce outcome: FAILURE
+[orchestrator 22:47:11] not reproduced; staying assigned for manual review; done
+[orchestrator 22:47:11] lock released

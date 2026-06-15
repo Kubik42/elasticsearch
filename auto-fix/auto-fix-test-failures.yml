@@ -1,0 +1,68 @@
+# Automated test-failure fixer. Periodically: find one unassigned StorageEngine >test-failure issue (step 1), reproduce
+# it against base main (step 2), and - only if reproduced - drive an agent to fix it and open a DRAFT PR (step 3).
+#
+# Safety model: the issue body is untrusted and never reaches a shell (handed off as files); the reproduction command
+# is parsed against a strict allow-list and exec'd argv-direct; the generated patch passes a fail-closed diff guard and
+# independent verification; every result is a draft PR requiring human + CI review. See the auto-fix-*-plan.md files.
+#
+# To run as a real workflow, copy this file to .github/workflows/. It is kept under auto-fix/ so the prototype stays
+# self-contained and deletable.
+name: auto-fix-test-failures
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # cadence is tunable; the concurrency guard makes changing it safe
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Skip all GitHub mutations (assign/comment/PR)'
+        type: boolean
+        default: false
+
+permissions:
+  issues: write           # assign + comment
+  contents: write         # branch/commit/push (step 3)
+  pull-requests: write    # draft PR (step 3)
+
+concurrency:
+  group: auto-fix-test-failures
+  cancel-in-progress: false   # serialize runs; never kill an in-flight fix
+
+jobs:
+  fix:
+    runs-on: self-hosted      # the ES build needs JDK 25/26 toolchains, Gradle, Docker, and substantial RAM
+    timeout-minutes: 90       # cost/runaway control, NOT the concurrency mechanism
+    # All tunables (GH_REPO, ASSIGNEE, PR/push targets, budgets, ...) live in auto-fix/config.env - the single config.
+    # Only the dynamic dry-run input and the GitHub token are wired here; everything else is read from config.env. NOTE:
+    # the default flow pushes to a `fork` remote and opens a cross-repo PR, so a CI runner needs that remote configured
+    # with a push token, or must override AUTOFIX_PUSH_REMOTE / AUTOFIX_PR_HEAD_OWNER for a same-repo flow.
+    env:
+      AUTOFIX_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # step 2/3 need full history to pin and reset to a base SHA
+
+      - name: Step 1 - discover & claim an issue
+        id: discover
+        run: bash auto-fix/discover.sh
+
+      - name: Step 2 - reproduce the failure
+        id: reproduce
+        if: steps.discover.outputs.issue != ''
+        run: bash auto-fix/reproduce.sh
+
+      - name: Step 3 - generate fix, verify, open draft PR
+        id: fix
+        if: steps.reproduce.outputs.outcome == 'REPRODUCED'
+        run: bash auto-fix/fix.sh
+
+      - name: Upload diagnostics
+        if: always() && steps.discover.outputs.issue != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-fix-diagnostics
+          path: auto-fix/run/
+          if-no-files-found: ignore

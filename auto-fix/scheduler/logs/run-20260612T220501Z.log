@@ -1,0 +1,29 @@
+[orchestrator 22:05:01] lock acquired (pid 2463); full log: /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/scheduler/logs/run-20260612T220501Z.log
+[orchestrator 22:05:01] === step: discover (discover.sh) ===
+[auto-fix 22:05:01] querying candidate pool in elastic/elasticsearch
+[auto-fix 22:05:03] primary #151126: [CI] TimeSeriesWithoutTests class failing
+[auto-fix 22:05:03] primary locus: <none>
+[auto-fix 22:05:03] siblings: <none>
+https://github.com/elastic/elasticsearch/issues/151126
+[auto-fix 22:05:05] claimed primary #151126 for Kubik42
+[auto-fix 22:05:05] output issue=151126
+[auto-fix 22:05:05] output issue_json=/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/issue.json
+[auto-fix 22:05:05] output siblings=
+[orchestrator 22:05:05] step discover exited 0
+[orchestrator 22:05:05] claimed issue #151126
+[orchestrator 22:05:05] === step: reproduce (reproduce.sh) ===
+From github.com:elastic/elasticsearch
+ * branch                      main       -> FETCH_HEAD
+   19b439454a36..83e6f8fe5e4f  main       -> elasticsearch_main/main
+Reset branch 'auto-fix/working-base'
+branch 'auto-fix/working-base' set up to track 'elasticsearch_main/main'.
+Your branch is up to date with 'elasticsearch_main/main'.
+[auto-fix 22:05:17] reset run worktree /Users/dmitrykubikov/workspace/elasticsearch-autofix-worktree to elasticsearch_main/main
+[auto-fix 22:05:17] base SHA 83e6f8fe5e4f8f24b856c785f82237484fb0fe79
+[auto-fix 22:05:18] output outcome=FAILURE
+https://github.com/elastic/elasticsearch/issues/151126#issuecomment-4695806279
+[auto-fix 22:05:19] step 2 outcome: FAILURE
+[orchestrator 22:05:19] step reproduce exited 0
+[orchestrator 22:05:19] reproduce outcome: FAILURE
+[orchestrator 22:05:19] not reproduced; staying assigned for manual review; done
+[orchestrator 22:05:19] lock released

@@ -1,0 +1,28 @@
+[orchestrator 22:06:36] lock acquired (pid 2869); full log: /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/scheduler/logs/run-20260612T220636Z.log
+[orchestrator 22:06:36] === step: discover (discover.sh) ===
+[auto-fix 22:06:36] querying candidate pool in elastic/elasticsearch
+[auto-fix 22:06:37] primary #151012: [CI] AVLTreeDigestTests testMonotonicity failing
+[auto-fix 22:06:37] primary locus: :libs:tdigest:test::testMonotonicity
+[auto-fix 22:06:37] siblings: <none>
+https://github.com/elastic/elasticsearch/issues/151012
+[auto-fix 22:06:39] claimed primary #151012 for Kubik42
+[auto-fix 22:06:39] output issue=151012
+[auto-fix 22:06:39] output issue_json=/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/issue.json
+[auto-fix 22:06:39] output siblings=
+[orchestrator 22:06:39] step discover exited 0
+[orchestrator 22:06:39] claimed issue #151012
+[orchestrator 22:06:39] === step: reproduce (reproduce.sh) ===
+From github.com:elastic/elasticsearch
+ * branch                      main       -> FETCH_HEAD
+Reset branch 'auto-fix/working-base'
+branch 'auto-fix/working-base' set up to track 'elasticsearch_main/main'.
+Your branch is up to date with 'elasticsearch_main/main'.
+[auto-fix 22:06:42] reset run worktree /Users/dmitrykubikov/workspace/elasticsearch-autofix-worktree to elasticsearch_main/main
+[auto-fix 22:06:42] base SHA 83e6f8fe5e4f8f24b856c785f82237484fb0fe79
+[auto-fix 22:06:42] output outcome=FAILURE
+https://github.com/elastic/elasticsearch/issues/151012#issuecomment-4695813687
+[auto-fix 22:06:43] step 2 outcome: FAILURE
+[orchestrator 22:06:43] step reproduce exited 0
+[orchestrator 22:06:43] reproduce outcome: FAILURE
+[orchestrator 22:06:43] not reproduced; staying assigned for manual review; done
+[orchestrator 22:06:43] lock released

@@ -1,0 +1,50 @@
+[orchestrator 23:50:53] lock acquired (pid 31020); full log: /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/scheduler/logs/run-20260612T235053Z.log
+[orchestrator 23:50:53] === step: discover (discover.sh) ===
+[auto-fix 23:50:53] querying candidate pool in elastic/elasticsearch
+[auto-fix 23:50:54] primary #149350: [CI] MixedClusterClientYamlTestSuiteIT test {p0=index/100_field_name_length_limit/Test field name length limit array synthetic source} failing
+[auto-fix 23:50:54] primary locus: :qa:mixed-cluster:v9.3.5#mixedClusterTest::index/100_field_name_length_limit
+Traceback (most recent call last):
+  File "/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/parse_repro.py", line 309, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/parse_repro.py", line 297, in main
+    body = issue.get("body") or ""
+           ^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'get'
+[auto-fix 23:50:55] siblings: 149350
+[auto-fix 23:50:55] DRY_RUN: would run: gh issue edit 149350 --repo elastic/elasticsearch --add-assignee Kubik42
+[auto-fix 23:50:55] claimed primary #149350 for Kubik42
+[auto-fix 23:50:55] DRY_RUN: would run: gh issue edit 149350 --repo elastic/elasticsearch --add-assignee Kubik42
+[auto-fix 23:50:55] claimed sibling #149350 for Kubik42
+[auto-fix 23:50:55] output issue=149350
+[auto-fix 23:50:55] output issue_json=/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/issue.json
+[auto-fix 23:50:55] output siblings=149350
+[orchestrator 23:50:55] step discover exited 0
+[orchestrator 23:50:55] claimed issue #149350
+[orchestrator 23:50:55] === step: reproduce (reproduce.sh) ===
+From github.com:elastic/elasticsearch
+ * branch                      main       -> FETCH_HEAD
+Reset branch 'auto-fix/working-base'
+branch 'auto-fix/working-base' set up to track 'elasticsearch_main/main'.
+Your branch is up to date with 'elasticsearch_main/main'.
+[auto-fix 23:50:57] reset run worktree /Users/dmitrykubikov/workspace/elasticsearch-autofix-worktree to elasticsearch_main/main
+[auto-fix 23:50:57] base SHA 83e6f8fe5e4f8f24b856c785f82237484fb0fe79
+[auto-fix 23:50:57] branch gate ok (main is applicable)
+[auto-fix 23:50:57] java gate ok (JAVA26_HOME present)
+[auto-fix 23:50:57] unmuted 5 muted-tests.yml entr(y/ies) [#146312 146410 147251 149350 151117] for the org.elasticsearch.backwards.MixedClusterClientYamlTestSuiteIT.test family before reproducing
+[auto-fix 23:50:57] attempt [narrow/original]: ./gradlew :qa:mixed-cluster:v9.3.5#mixedClusterTest --rerun-tasks --no-build-cache --no-configuration-cache -Druntime.java=26 -Dtests.class=org.elasticsearch.backwards.MixedClusterClientYamlTestSuiteIT -Dtests.method=test {p0=index/100_field_name_length_limit/Test field name length limit array synthetic source} -Dtests.seed=6B04C5FB10BA706 -Dtests.bwc=true -Dtests.locale=cv-Cyrl-RU -Dtests.timezone=Indian/Maldives
+[auto-fix 23:53:40] attempt [narrow/original] gradle exit 0
+[auto-fix 23:53:40] final classification: NOT_REPRODUCED
+[auto-fix 23:53:40] reverted muted-tests.yml unmute (step 3 will remove the mutes permanently)
+[auto-fix 23:53:40] output outcome=NOT_REPRODUCED
+[auto-fix 23:53:40] DRY_RUN: would run: gh issue comment 149350 --repo elastic/elasticsearch --body-file /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/comment.md
+[auto-fix 23:53:40] step 2 outcome: NOT_REPRODUCED
+[orchestrator 23:53:40] step reproduce exited 0
+[orchestrator 23:53:40] reproduce outcome: NOT_REPRODUCED
+
+**Auto-fix step 2 — NOT_REPRODUCED**
+
+The named test passed on base 83e6f8fe5e4f8f24b856c785f82237484fb0fe79 with the issue's seed. Not reproducible as-is (single-phase; -Dtests.iters phase is deferred). Staying assigned for manual review.
+
+[orchestrator 23:53:40] not reproduced; staying assigned for manual review; done
+[orchestrator 23:53:40] lock released

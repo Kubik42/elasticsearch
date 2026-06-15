@@ -1,0 +1,33 @@
+[orchestrator 23:42:28] lock acquired (pid 28469); full log: /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/scheduler/logs/run-20260612T234228Z.log
+[orchestrator 23:42:28] === step: discover (discover.sh) ===
+[auto-fix 23:42:28] querying candidate pool in elastic/elasticsearch
+[auto-fix 23:42:29] primary #149350: [CI] MixedClusterClientYamlTestSuiteIT test {p0=index/100_field_name_length_limit/Test field name length limit array synthetic source} failing
+[auto-fix 23:42:29] primary locus: <none>
+[auto-fix 23:42:29] siblings: <none>
+[auto-fix 23:42:29] DRY_RUN: would run: gh issue edit 149350 --repo elastic/elasticsearch --add-assignee Kubik42
+[auto-fix 23:42:29] claimed primary #149350 for Kubik42
+[auto-fix 23:42:29] output issue=149350
+[auto-fix 23:42:29] output issue_json=/Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/issue.json
+[auto-fix 23:42:29] output siblings=
+[orchestrator 23:42:29] step discover exited 0
+[orchestrator 23:42:29] claimed issue #149350
+[orchestrator 23:42:29] === step: reproduce (reproduce.sh) ===
+From github.com:elastic/elasticsearch
+ * branch                      main       -> FETCH_HEAD
+Reset branch 'auto-fix/working-base'
+branch 'auto-fix/working-base' set up to track 'elasticsearch_main/main'.
+Your branch is up to date with 'elasticsearch_main/main'.
+[auto-fix 23:42:31] reset run worktree /Users/dmitrykubikov/workspace/elasticsearch-autofix-worktree to elasticsearch_main/main
+[auto-fix 23:42:31] base SHA 83e6f8fe5e4f8f24b856c785f82237484fb0fe79
+[auto-fix 23:42:31] output outcome=FAILURE
+[auto-fix 23:42:31] DRY_RUN: would run: gh issue comment 149350 --repo elastic/elasticsearch --body-file /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/run/comment.md
+[auto-fix 23:42:31] step 2 outcome: FAILURE
+[orchestrator 23:42:31] step reproduce exited 0
+[orchestrator 23:42:31] reproduce outcome: FAILURE
+
+**Auto-fix step 2 — FAILURE**
+
+Could not parse a safe reproduction command: task path has unexpected characters: ':qa:mixed-cluster:v9.3.5#mixedClusterTest'
+
+[orchestrator 23:42:31] not reproduced; staying assigned for manual review; done
+[orchestrator 23:42:31] lock released

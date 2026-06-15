@@ -1,0 +1,9 @@
+[orchestrator 22:05:01] lock acquired (pid 2463); full log: /Users/dmitrykubikov/workspace/elasticsearch/auto-fix/scheduler/logs/run-20260612T220501Z.log
+[orchestrator 22:05:01] === step: discover (discover.sh) ===
+[orchestrator 22:05:05] step discover exited 0
+[orchestrator 22:05:05] claimed issue #151126
+[orchestrator 22:05:05] === step: reproduce (reproduce.sh) ===
+[orchestrator 22:05:19] step reproduce exited 0
+[orchestrator 22:05:19] reproduce outcome: FAILURE
+[orchestrator 22:05:19] not reproduced; staying assigned for manual review; done
+[orchestrator 22:05:19] lock released
