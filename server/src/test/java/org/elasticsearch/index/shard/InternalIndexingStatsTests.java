@@ -12,8 +12,11 @@ package org.elasticsearch.index.shard;
 import org.elasticsearch.action.bulk.BulkItemRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.common.bytes.BytesArray;
+import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.index.Index;
+import org.elasticsearch.index.IndexMode;
+import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.engine.EngineTestCase;
 import org.elasticsearch.index.engine.IndexOperationBatch;
@@ -21,13 +24,19 @@ import org.elasticsearch.index.engine.VersionConflictEngineException;
 import org.elasticsearch.index.mapper.ParsedDocument;
 import org.elasticsearch.index.mapper.Uid;
 import org.elasticsearch.index.seqno.SequenceNumbers;
+import org.elasticsearch.telemetry.InstrumentType;
+import org.elasticsearch.telemetry.Measurement;
+import org.elasticsearch.telemetry.RecordingMeterRegistry;
+import org.elasticsearch.telemetry.metric.MetricAttributes;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xcontent.XContentType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.mockito.Mockito.mock;
@@ -41,7 +50,9 @@ public class InternalIndexingStatsTests extends ESTestCase {
         InternalIndexingStats internalIndexingStats = new InternalIndexingStats(
             () -> currentTime.get(),
             new IndexingStatsSettings(ClusterSettings.createBuiltInClusterSettings()),
-            numThreads
+            numThreads,
+            IndexingMetrics.NOOP,
+            IndexMode.STANDARD
         );
 
         ParsedDocument doc = EngineTestCase.createParsedDoc("1", null);
@@ -78,7 +89,7 @@ public class InternalIndexingStatsTests extends ESTestCase {
         ShardId shardId = new ShardId(new Index("index", "_na_"), 0);
 
         final int docCount = randomIntBetween(3, 16);
-        final IndexOperationBatch batch = primaryBatch(docCount);
+        final IndexOperationBatch batch = batch(docCount, Engine.Operation.Origin.PRIMARY);
         final List<Engine.IndexResult> results = new ArrayList<>(docCount);
         // guarantee at least one success, one document failure and one version conflict, then randomize the rest
         results.add(successResult(randomLongBetween(1, 1_000_000)));
@@ -109,7 +120,7 @@ public class InternalIndexingStatsTests extends ESTestCase {
         ShardId shardId = new ShardId(new Index("index", "_na_"), 0);
 
         final int docCount = randomIntBetween(1, 16);
-        final IndexOperationBatch batch = primaryBatch(docCount);
+        final IndexOperationBatch batch = batch(docCount, Engine.Operation.Origin.PRIMARY);
         final Exception failure = new RuntimeException("engine failure");
 
         final List<Engine.Index> ops = batch.materializeIndexOps();
@@ -126,15 +137,110 @@ public class InternalIndexingStatsTests extends ESTestCase {
         assertStatsEqual(perOpStats, batchStats, currentTime.get());
     }
 
+    /**
+     * Only failures of primary operations reach the APM failure counter, one increment per failed document on every hook shape.
+     */
+    public void testApmFailureCounterCountsPrimaryOperationsOnly() {
+        RecordingMeterRegistry registry = new RecordingMeterRegistry();
+        IndexMode indexMode = randomFrom(IndexMode.values());
+        // replica batches need primary responses on the items, which are package-private to the bulk package, so batches skip REPLICA
+        final int hook = randomIntBetween(0, 2);
+        Engine.Operation.Origin origin = hook == 0
+            ? randomFrom(Engine.Operation.Origin.values())
+            : randomValueOtherThan(Engine.Operation.Origin.REPLICA, () -> randomFrom(Engine.Operation.Origin.values()));
+        InternalIndexingStats stats = new InternalIndexingStats(
+            () -> 0L,
+            new IndexingStatsSettings(ClusterSettings.createBuiltInClusterSettings()),
+            randomIntBetween(1, 8),
+            new IndexingMetrics(registry),
+            indexMode
+        );
+        ShardId shardId = new ShardId(new Index("index", "_na_"), 0);
+        Exception failure = randomFrom(
+            new RuntimeException(randomAlphaOfLength(5)),
+            new VersionConflictEngineException(shardId, randomAlphaOfLength(5), "conflict")
+        );
+        final int docCount = randomIntBetween(1, 16);
+        final long expectedFailures;
+        switch (hook) {
+            case 0 -> {
+                Engine.Index op = indexOp(origin);
+                stats.preIndex(shardId, op);
+                if (randomBoolean()) {
+                    stats.postIndex(shardId, op, failure);
+                } else {
+                    stats.postIndex(shardId, op, failureResult(op.id(), failure));
+                }
+                expectedFailures = 1;
+            }
+            case 1 -> {
+                IndexOperationBatch batch = batch(docCount, origin);
+                List<Engine.IndexResult> results = new ArrayList<>(docCount);
+                for (int d = 0; d < docCount; d++) {
+                    results.add(failureResult(batch.id(d), failure));
+                }
+                stats.preIndexBatch(shardId, batch);
+                stats.postIndexBatch(shardId, batch, results);
+                expectedFailures = docCount;
+            }
+            case 2 -> {
+                IndexOperationBatch batch = batch(docCount, origin);
+                stats.preIndexBatch(shardId, batch);
+                stats.postIndexBatch(shardId, batch, failure);
+                expectedFailures = docCount;
+            }
+            default -> throw new AssertionError("unexpected");
+        }
+
+        List<Measurement> measurements = registry.getRecorder()
+            .getMeasurements(InstrumentType.LONG_COUNTER, IndexingMetrics.INDEXING_FAILURE_TOTAL);
+        if (origin != Engine.Operation.Origin.PRIMARY) {
+            assertThat(measurements, empty());
+            return;
+        }
+        Map<String, Object> expectedAttributes = Map.of(
+            MetricAttributes.ES_INDEX_MODE,
+            indexMode.getName(),
+            MetricAttributes.ERROR_TYPE,
+            failure.getClass().getSimpleName()
+        );
+        long total = 0;
+        for (Measurement measurement : measurements) {
+            assertThat(measurement.attributes(), equalTo(expectedAttributes));
+            total += measurement.getLong();
+        }
+        assertThat(total, equalTo(expectedFailures));
+    }
+
     private static InternalIndexingStats newStats(AtomicLong currentTime) {
         return new InternalIndexingStats(
             currentTime::get,
             new IndexingStatsSettings(ClusterSettings.createBuiltInClusterSettings()),
-            randomIntBetween(1, 8)
+            randomIntBetween(1, 8),
+            IndexingMetrics.NOOP,
+            IndexMode.STANDARD
         );
     }
 
-    private static IndexOperationBatch primaryBatch(int docCount) {
+    private static Engine.Index indexOp(Engine.Operation.Origin origin) {
+        ParsedDocument doc = EngineTestCase.createParsedDoc(randomAlphaOfLength(5), null);
+        return new Engine.Index(
+            Uid.encodeId(doc.id()),
+            doc,
+            SequenceNumbers.UNASSIGNED_SEQ_NO,
+            1L,
+            Versions.MATCH_ANY,
+            origin == Engine.Operation.Origin.PRIMARY ? VersionType.INTERNAL : null,
+            origin,
+            0L,
+            -1,
+            false,
+            SequenceNumbers.UNASSIGNED_SEQ_NO,
+            0
+        );
+    }
+
+    private static IndexOperationBatch batch(int docCount, Engine.Operation.Origin origin) {
         final BulkItemRequest[] items = new BulkItemRequest[docCount];
         for (int d = 0; d < docCount; d++) {
             items[d] = new BulkItemRequest(
@@ -142,7 +248,7 @@ public class InternalIndexingStatsTests extends ESTestCase {
                 new IndexRequest("index").id("doc-" + d).source(new BytesArray("{\"n\":" + d + "}"), XContentType.JSON)
             );
         }
-        return IndexOperationBatch.initFromBulk(items, 0, docCount, null, Engine.Operation.Origin.PRIMARY, 1L, 0L);
+        return IndexOperationBatch.initFromBulk(items, 0, docCount, null, origin, 1L, 0L);
     }
 
     private static Engine.IndexResult randomResult(ShardId shardId, String id) {

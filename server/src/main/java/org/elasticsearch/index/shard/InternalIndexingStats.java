@@ -18,6 +18,7 @@ import org.elasticsearch.common.metrics.ExponentiallyWeightedMovingRate;
 import org.elasticsearch.common.metrics.MeanMetric;
 import org.elasticsearch.common.util.ThreadUtilizationTracker;
 import org.elasticsearch.core.TimeValue;
+import org.elasticsearch.index.IndexMode;
 import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.engine.IndexOperationBatch;
 import org.elasticsearch.index.engine.VersionConflictEngineException;
@@ -40,9 +41,19 @@ public final class InternalIndexingStats implements IndexingOperationListener {
 
     private final LongSupplier relativeTimeInNanosSupplier;
     private final StatsHolder totalStats;
+    private final IndexingMetrics indexingMetrics;
+    private final IndexMode indexMode;
 
-    InternalIndexingStats(LongSupplier relativeTimeInNanosSupplier, IndexingStatsSettings settings, int numIndexingThreads) {
+    InternalIndexingStats(
+        LongSupplier relativeTimeInNanosSupplier,
+        IndexingStatsSettings settings,
+        int numIndexingThreads,
+        IndexingMetrics indexingMetrics,
+        IndexMode indexMode
+    ) {
         this.relativeTimeInNanosSupplier = relativeTimeInNanosSupplier;
+        this.indexingMetrics = indexingMetrics;
+        this.indexMode = indexMode;
         this.totalStats = new StatsHolder(
             relativeTimeInNanosSupplier,
             settings.getRecentWriteLoadHalfLifeForNewShards(),
@@ -135,6 +146,7 @@ public final class InternalIndexingStats implements IndexingOperationListener {
                 totalStats.indexFailedDueToVersionConflicts.inc();
             }
         }
+        recordPrimaryFailure(index.origin(), ex, 1);
     }
 
     @Override
@@ -169,6 +181,7 @@ public final class InternalIndexingStats implements IndexingOperationListener {
                     if (ExceptionsHelper.unwrapCause(result.getFailure()) instanceof VersionConflictEngineException) {
                         versionConflicts++;
                     }
+                    recordPrimaryFailure(batch.origin(), result.getFailure(), 1);
                 }
                 default -> throw new IllegalArgumentException("unknown result type: " + result.getResultType());
             }
@@ -192,6 +205,14 @@ public final class InternalIndexingStats implements IndexingOperationListener {
             final int docCount = batch.docCount();
             totalStats.indexCurrent.dec(docCount);
             totalStats.indexFailed.inc(docCount);
+        }
+        recordPrimaryFailure(batch.origin(), ex, batch.docCount());
+    }
+
+    /** Only primaries feed the APM failure counter; replicas and recovery replay the same failures and would double count. */
+    private void recordPrimaryFailure(Engine.Operation.Origin origin, Exception ex, long count) {
+        if (origin == Engine.Operation.Origin.PRIMARY) {
+            indexingMetrics.onFailure(indexMode, ex, count);
         }
     }
 
